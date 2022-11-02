@@ -1,4 +1,5 @@
 # 스프링 핵심 원리-고급편(김영한) 학습 1
+>> https://www.inflearn.com/course/%EC%8A%A4%ED%94%84%EB%A7%81-%ED%95%B5%EC%8B%AC-%EC%9B%90%EB%A6%AC-%EA%B3%A0%EA%B8%89%ED%8E%B8
 ## _💻로그 추적기 구현_
 
 - Project: Gradle Project
@@ -54,8 +55,7 @@ ex=java.lang.IllegalStateException: 예외 발생!
 - 실행
   - 정상 : http://localhost:8080/v1/request?itemId=hello
   - 예외 : http://localhost:8080/v1/request?itemId=ex
-- 결과
-  - 정상 실행 로그
+- 정상 실행 로그 결과
 ```sh
 [11111111] OrderController.request()
 [22222222] OrderService.orderItem()
@@ -64,7 +64,7 @@ ex=java.lang.IllegalStateException: 예외 발생!
 [22222222] OrderService.orderItem() time=1001ms
 [11111111] OrderController.request() time=1001ms
 ```
-  - 예외 실행 로그
+- 예외 실행 로그 결과
 ```sh
 [5e110a14] OrderController.request()
 [6bc1dcd2] OrderService.orderItem()
@@ -79,8 +79,7 @@ ex=java.lang.IllegalStateException: 예외 발생!
 - 실행
   - 정상 : http://localhost:8080/v2/request?itemId=hello
   - 예외 : http://localhost:8080/v2/request?itemId=ex
-- 결과
-  - 정상 실행 로그
+- 정상 실행 로그 결과
 ```sh
 [c80f5dbb] OrderController.request()
 [c80f5dbb] |-->OrderService.orderItem()
@@ -89,7 +88,7 @@ ex=java.lang.IllegalStateException: 예외 발생!
 [c80f5dbb] |<--OrderService.orderItem() time=1014ms
 [c80f5dbb] OrderController.request() time=1017ms
 ```
-  - 예외 실행 로그
+- 예외 실행 로그 결과
 ```sh
 [ca867d59] OrderController.request()
 [ca867d59] |-->OrderService.orderItem()
@@ -97,4 +96,35 @@ ex=java.lang.IllegalStateException: 예외 발생!
 [ca867d59] | |<X-OrderRepository.save() time=0ms ex=java.lang.IllegalStateException: 예외 발생!
 [ca867d59] |<X-OrderService.orderItem() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
 [ca867d59] OrderController.request() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
+```
+- 동기화는 성공했지만, 로그를 출력하는 모든 메서드에 TraceId 파라미터를 추가해야 하는 문제가 발생한다.
+
+### Version 3 - 쓰레드 로컬 동기화 개발
+- LogTrace 인터페이스, FieldLogTrace 클래스를 생성한다.
+- TraceId 를 동기화 할 때 파라미터가 아닌 TraceId traceIdHolder 필드를 사용한다.
+   - 테스트 코드 : advanced/src/test/java/hello/advanced/trace/logtrace/FieldLogTraceTest.
+- 이 때 동시에 여러 사용자가 요청하면 로그가 섞여서 출력되는 동시성 문제가 발생한다.
+  - 동시성 문제를 ThreadLocal을 사용하여 해결한다.
+- 필드 대신에 쓰레드 로컬을 사용해서 데이터를 동기화하는 ThreadLocalLogTrace를 생성한다.
+- Controller, Service, Repository에 ThreadLocalLogTrace를 적용한다.
+- 실행
+  - 정상 : http://localhost:8080/v3/request?itemId=hello
+  - 예외 : http://localhost:8080/v3/request?itemId=ex
+- 정상 실행 로그 결과
+```sh
+[f8477cfc] OrderController.request()
+[f8477cfc] |-->OrderService.orderItem()
+[f8477cfc] | |-->OrderRepository.save()
+[f8477cfc] | |<--OrderRepository.save() time=1004ms
+[f8477cfc] |<--OrderService.orderItem() time=1006ms
+[f8477cfc] OrderController.request() time=1007ms
+```
+- 예외 실행 로그 결과
+```sh
+[c426fcfc] OrderController.request()
+[c426fcfc] |-->OrderService.orderItem()
+[c426fcfc] | |-->OrderRepository.save()
+[c426fcfc] | |<X-OrderRepository.save() time=0ms ex=java.lang.IllegalStateException: 예외 발생!
+[c426fcfc] |<X-OrderService.orderItem() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
+[c426fcfc] OrderController.request() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
 ```
