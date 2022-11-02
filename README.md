@@ -4,6 +4,7 @@
 #
 ## _💻로그 추적기 구현_
 
+- ThreadLocal, 템플릿 메서드 패턴, 템플릿 콜백 패턴을 적용하여 로그 추적기를 구현한다.
 - Project: Gradle Project
 - Language: Java
 - Spring Boot: 2.5.x
