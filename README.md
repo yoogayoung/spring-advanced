@@ -1,10 +1,10 @@
-# [스프링 핵심 원리-고급편(김영한)] 강의 학습
-## _로그 추적기 구현_
+# 스프링 핵심 원리-고급편(김영한) 학습 1
+## _💻로그 추적기 구현_
 
-Project: Gradle Project
-Language: Java
-Spring Boot: 2.5.x
-Dependencies: Spring Web, Lombok
+- Project: Gradle Project
+- Language: Java
+- Spring Boot: 2.5.x
+- Dependencies: Spring Web, Lombok
 
 ### 요구사항
 - 모든 PUBLIC 메서드의 호출과 응답 정보를 로그로 출력
@@ -72,4 +72,29 @@ ex=java.lang.IllegalStateException: 예외 발생!
 [48ddffd6] OrderRepository.save() time=0ms ex=java.lang.IllegalStateException:예외 발생!
 [6bc1dcd2] OrderService.orderItem() time=6ms ex=java.lang.IllegalStateException: 예외 발생!
 [5e110a14] OrderController.request() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
+```
+
+### Version 2 - 파라미터로 동기화 개발
+- 트랜잭션ID와 메서드 호출의 깊이를 표현하기 위해 첫 로그에서 사용한 트랜잭션ID 와 깊이(level)를 다음 로그에 넘겨준다.
+- 실행
+  - 정상 : http://localhost:8080/v2/request?itemId=hello
+  - 예외 : http://localhost:8080/v2/request?itemId=ex
+- 결과
+  - 정상 실행 로그
+```sh
+[c80f5dbb] OrderController.request()
+[c80f5dbb] |-->OrderService.orderItem()
+[c80f5dbb] | |-->OrderRepository.save()
+[c80f5dbb] | |<--OrderRepository.save() time=1005ms
+[c80f5dbb] |<--OrderService.orderItem() time=1014ms
+[c80f5dbb] OrderController.request() time=1017ms
+```
+  - 예외 실행 로그
+```sh
+[ca867d59] OrderController.request()
+[ca867d59] |-->OrderService.orderItem()
+[ca867d59] | |-->OrderRepository.save()
+[ca867d59] | |<X-OrderRepository.save() time=0ms ex=java.lang.IllegalStateException: 예외 발생!
+[ca867d59] |<X-OrderService.orderItem() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
+[ca867d59] OrderController.request() time=7ms ex=java.lang.IllegalStateException: 예외 발생!
 ```
